@@ -4,3 +4,4 @@ mediapipe
 librosa
 numpy
 pandas
+soundfile
