@@ -44,6 +44,7 @@ page = st.sidebar.radio(
         "Mark Attendance",
         "Face Attendance",
         "Audio Analysis",
+        "AI Insights",
         "Attendance Records"
     ]
 )
@@ -190,3 +191,28 @@ elif page == "Audio Analysis":
             file_name="audio_analysis.csv",
             mime="text/csv"
         )  
+
+
+elif page == "AI Insights":
+    st.header("🤖 Multimodal AI Insights")
+
+    insights_file = BASE_DIR / "engagement_insights.csv"
+
+    if insights_file.exists():
+        insights = pd.read_csv(insights_file)
+
+        if not insights.empty:
+            st.dataframe(insights, use_container_width=True)
+
+            st.download_button(
+                "Download AI Insights",
+                data=insights.to_csv(index=False).encode("utf-8"),
+                file_name="engagement_insights.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("The insights file is empty.")
+    else:
+        st.warning(
+            "Run multimodal_agent.py first to generate AI insights."
+        )
