@@ -43,6 +43,7 @@ page = st.sidebar.radio(
         "Dashboard",
         "Mark Attendance",
         "Face Attendance",
+        "Audio Analysis",
         "Attendance Records"
     ]
 )
@@ -163,3 +164,29 @@ elif page == "Attendance Records":
         st.info("No face attendance records are available.")
     else:
         st.dataframe(face_records, use_container_width=True)
+
+elif page == "Audio Analysis":
+    st.header("🎙️ Audio Analysis")
+
+    audio_file = BASE_DIR / "audio_analysis.csv"
+    summary_file = BASE_DIR / "session_audio_summary.csv"
+
+    if audio_file.exists():
+        audio_df = pd.read_csv(audio_file)
+        st.subheader("Segment-Level Results")
+        st.dataframe(audio_df, use_container_width=True)
+    else:
+        st.info("Run audio_analysis.py to generate audio results.")
+
+    if summary_file.exists():
+        summary_df = pd.read_csv(summary_file)
+        st.subheader("Session Summary")
+        st.dataframe(summary_df, use_container_width=True)
+
+        st.download_button(
+            "Download Audio Analysis CSV",
+            data=audio_df.to_csv(index=False).encode("utf-8")
+            if audio_file.exists() else summary_df.to_csv(index=False).encode("utf-8"),
+            file_name="audio_analysis.csv",
+            mime="text/csv"
+        )  
