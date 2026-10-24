@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
+import pandas as pd
+import streamlit as st
 
 # Configure the application
 st.set_page_config(
@@ -193,15 +195,18 @@ elif page == "Audio Analysis":
         )  
 
 
+
 elif page == "AI Insights":
     st.header("🤖 Multimodal AI Insights")
 
+    # Load AI insights
     insights_file = BASE_DIR / "engagement_insights.csv"
 
     if insights_file.exists():
         insights = pd.read_csv(insights_file)
 
         if not insights.empty:
+            st.subheader("Engagement Insights")
             st.dataframe(insights, use_container_width=True)
 
             st.download_button(
@@ -215,4 +220,28 @@ elif page == "AI Insights":
     else:
         st.warning(
             "Run multimodal_agent.py first to generate AI insights."
+        )
+
+    # Display multimodal fusion results
+    st.subheader("Multimodal Signal Fusion")
+
+    fusion_file = BASE_DIR / "multimodal_fusion.csv"
+
+    if fusion_file.exists():
+        fusion_data = pd.read_csv(fusion_file)
+
+        if not fusion_data.empty:
+            st.dataframe(fusion_data, use_container_width=True)
+
+            st.download_button(
+                "Download Fusion Results",
+                data=fusion_data.to_csv(index=False).encode("utf-8"),
+                file_name="multimodal_fusion.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("The fusion file is empty.")
+    else:
+        st.info(
+            "Run multimodal_fusion.py to generate fusion results."
         )
