@@ -196,6 +196,7 @@ elif page == "Audio Analysis":
 
 
 
+
 elif page == "AI Insights":
     st.header("🤖 Multimodal AI Insights")
 
@@ -245,3 +246,45 @@ elif page == "AI Insights":
         st.info(
             "Run multimodal_fusion.py to generate fusion results."
         )
+
+    # Display engagement scores
+    st.subheader("📊 Engagement Scores")
+
+    scores_file = BASE_DIR / "engagement_scores.csv"
+
+    if scores_file.exists():
+        scores_df = pd.read_csv(scores_file)
+
+        if not scores_df.empty:
+            st.dataframe(scores_df, use_container_width=True)
+
+            # Display the latest available score
+            if "engagement_score" in scores_df.columns:
+                latest_score = scores_df["engagement_score"].iloc[-1]
+                st.metric(
+                    "Prototype Engagement Score",
+                    f"{latest_score:.1f}/100"
+                )
+
+            if "engagement_level" in scores_df.columns:
+                latest_level = scores_df["engagement_level"].iloc[-1]
+                st.write(f"**Rule-based level:** {latest_level}")
+
+            st.download_button(
+                "Download Engagement Scores",
+                data=scores_df.to_csv(index=False).encode("utf-8"),
+                file_name="engagement_scores.csv",
+                mime="text/csv"
+            )
+
+            st.caption(
+                "Prototype score based on available signals only. "
+                "It does not verify attention, speech, or learning."
+            )
+        else:
+            st.info("The engagement scores file is empty.")
+    else:
+        st.warning(
+            "Run engagement_score.py first to generate engagement scores."
+        )
+
