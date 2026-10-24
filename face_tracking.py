@@ -27,8 +27,8 @@ if not cap.isOpened():
 # Tracking settings
 next_id = 1
 tracked_faces = {}
-MAX_DISTANCE = 100
-MAX_MISSING_FRAMES = 10
+MAX_DISTANCE = 150
+MAX_MISSING_FRAMES = 20
 
 # CSV file
 csv_file = open(
@@ -60,8 +60,8 @@ while True:
     faces = face_cascade.detectMultiScale(
         gray,
         scaleFactor=1.1,
-        minNeighbors=5,
-        minSize=(30, 30)
+        minNeighbors=6,
+        minSize=(60, 60)
     )
 
     # Har detected face ka center point
@@ -149,4 +149,4 @@ csv_file.close()
 cv2.destroyAllWindows()
 
 print("Tracking complete!")
-print("Tracking data tracking_log.csv mein save ho gaya.")
+print("Tracking data tracking_log.csv is saved")
