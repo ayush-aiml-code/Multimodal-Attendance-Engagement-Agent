@@ -321,3 +321,30 @@ elif page == "AI Insights":
             "Run teaching_suggestions.py first to generate suggestions."
         )
 
+# Student-Facing Analytics
+st.subheader("Student-Facing Analytics")
+
+student_analytics_file = BASE_DIR / "student_analytics.csv"
+
+if student_analytics_file.exists():
+    student_df = pd.read_csv(student_analytics_file)
+
+    if not student_df.empty:
+        st.dataframe(student_df, use_container_width=True)
+
+        st.download_button(
+            label="Download Student Analytics",
+            data=student_df.to_csv(index=False),
+            file_name="student_analytics.csv",
+            mime="text/csv"
+        )
+
+        st.caption(
+            "This report supports student reflection. "
+            "Prototype scores do not measure actual attention, "
+            "learning, or academic performance."
+        )
+    else:
+        st.info("Student analytics file is empty.")
+else:
+    st.warning("Run student_analytics.py to generate student analytics.")
