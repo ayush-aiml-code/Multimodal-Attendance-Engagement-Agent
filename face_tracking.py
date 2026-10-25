@@ -3,6 +3,7 @@ import cv2
 import os
 import csv
 import math
+import sys
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,20 +18,27 @@ if face_cascade.empty():
     print("Error: Face detection XML could not be loaded!")
     raise SystemExit(1)
 
-# Choose input: "webcam" or "video"
-INPUT_MODE = "video"
 
-# If using a video, put its filename here
+# Choose input mode through a command-line argument
 VIDEO_FILE = "classroom.mp4"
+
+if len(sys.argv) != 2 or sys.argv[1].lower() not in ["webcam", "video"]:
+    print("Usage:")
+    print("  python face_tracking.py webcam")
+    print("  python face_tracking.py video")
+    raise SystemExit(1)
+
+INPUT_MODE = sys.argv[1].lower()
 
 if INPUT_MODE == "webcam":
     cap = cv2.VideoCapture(0)
+    print("Starting webcam face tracking...")
+
 elif INPUT_MODE == "video":
     video_path = os.path.join(BASE_DIR, VIDEO_FILE)
     cap = cv2.VideoCapture(video_path)
-else:
-    print("Invalid INPUT_MODE!")
-    raise SystemExit(1)
+    print("Starting recorded video face tracking...")
+
 
 if not cap.isOpened():
     print("Error: Could not open the selected input.")
