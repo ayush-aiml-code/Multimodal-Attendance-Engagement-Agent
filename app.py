@@ -195,8 +195,6 @@ elif page == "Audio Analysis":
         )  
 
 
-
-
 elif page == "AI Insights":
     st.header("🤖 Multimodal AI Insights")
 
@@ -286,5 +284,40 @@ elif page == "AI Insights":
     else:
         st.warning(
             "Run engagement_score.py first to generate engagement scores."
+        )
+
+    # Display instructor-facing teaching suggestions
+    st.subheader("👨‍🏫 Teaching Suggestions")
+
+    suggestions_file = BASE_DIR / "teaching_suggestions.csv"
+
+    if suggestions_file.exists():
+        suggestions_df = pd.read_csv(suggestions_file)
+
+        if not suggestions_df.empty:
+            st.dataframe(
+                suggestions_df,
+                use_container_width=True
+            )
+
+            st.download_button(
+                "Download Teaching Suggestions",
+                data=suggestions_df.to_csv(
+                    index=False
+                ).encode("utf-8"),
+                file_name="teaching_suggestions.csv",
+                mime="text/csv"
+            )
+
+            st.caption(
+                "These are optional, rule-based teaching suggestions "
+                "derived from available signals. They do not confirm "
+                "student attention or classroom behavior."
+            )
+        else:
+            st.info("No teaching suggestions are available yet.")
+    else:
+        st.warning(
+            "Run teaching_suggestions.py first to generate suggestions."
         )
 
