@@ -1,9 +1,13 @@
-import streamlit as st
-import pandas as pd
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
 import streamlit as st
+import tempfile
+from video_tracking import process_video
+from attendance_processing import calculate_attendance
+from audio_extraction import extract_audio
+from audio_analysis import run_audio_analysis
+
 
 # Configure the application
 st.set_page_config(
@@ -112,7 +116,66 @@ elif page == "Mark Attendance":
             st.warning("Please enter a student name.")
 
 elif page == "Face Attendance":
-    st.header("📷 Face-Based Attendance")
+
+    
+    uploaded_video = st.file_uploader(
+        "Upload classroom video",
+        type=["mp4", "avi", "mov"],
+        key="face_attendance_video"
+    )
+
+    if uploaded_video is not None:
+        st.success(f"Video selected: {uploaded_video.name}")
+
+        if st.button("Process Video", key="process_face_video"):
+            temp_video_path = None
+
+            try:
+                suffix = Path(uploaded_video.name).suffix or ".mp4"
+
+                temp_file = tempfile.NamedTemporaryFile(
+                    delete=False,
+                    suffix=suffix
+                )
+                temp_file.write(uploaded_video.getvalue())
+                temp_file.close()
+
+                temp_video_path = Path(temp_file.name)
+
+                tracking_file = BASE_DIR / "tracking_log.csv"
+                cascade_file = (
+                    BASE_DIR / "haarcascade_frontalface_default.xml"
+                )
+
+                with st.spinner("Processing video... Please wait."):
+                    result = process_video(
+                        temp_video_path,
+                        tracking_file,
+                        cascade_file
+                    )
+
+                attendance_file = BASE_DIR / "attendance.csv"
+
+                attendance_df = calculate_attendance(
+                    tracking_file,
+                    attendance_file
+                )
+
+                face_records = attendance_df
+
+                st.success("Video tracking and attendance completed!")
+                st.dataframe(attendance_df, use_container_width=True)
+                st.write(
+                    f"Frames processed: {result['frames_processed']}"
+                )
+
+            except Exception as error:
+                st.error(f"Video processing failed: {error}")
+
+            finally:
+                if temp_video_path is not None:
+                    temp_video_path.unlink(missing_ok=True)
+
 
     if face_records.empty:
         st.warning(
@@ -142,7 +205,8 @@ elif page == "Face Attendance":
         )
 
     if st.button("Refresh Attendance"):
-        st.rerun()
+        st.rerun()   
+
 
 elif page == "Attendance Records":
     st.header("📋 Attendance Records")
@@ -168,31 +232,99 @@ elif page == "Attendance Records":
     else:
         st.dataframe(face_records, use_container_width=True)
 
+
+# Audio Analysis
 elif page == "Audio Analysis":
     st.header("🎙️ Audio Analysis")
 
-    audio_file = BASE_DIR / "audio_analysis.csv"
-    summary_file = BASE_DIR / "session_audio_summary.csv"
+    uploaded_audio = st.file_uploader(
+        "Upload an audio file",
+        type=["wav", "mp3", "flac", "ogg", "m4a"]
+    )
 
-    if audio_file.exists():
-        audio_df = pd.read_csv(audio_file)
-        st.subheader("Segment-Level Results")
-        st.dataframe(audio_df, use_container_width=True)
-    else:
-        st.info("Run audio_analysis.py to generate audio results.")
+    if st.button("Process Audio", type="primary"):
+        if uploaded_audio is None:
+            st.warning("Please upload an audio file first.")
+        else:
+            temp_audio_path = None
 
-    if summary_file.exists():
-        summary_df = pd.read_csv(summary_file)
-        st.subheader("Session Summary")
-        st.dataframe(summary_df, use_container_width=True)
+            try:
+                # Save the uploaded audio temporarily
+                suffix = Path(uploaded_audio.name).suffix or ".wav"
 
-        st.download_button(
-            "Download Audio Analysis CSV",
-            data=audio_df.to_csv(index=False).encode("utf-8")
-            if audio_file.exists() else summary_df.to_csv(index=False).encode("utf-8"),
-            file_name="audio_analysis.csv",
-            mime="text/csv"
-        )  
+                with tempfile.NamedTemporaryFile(
+                    delete=False,
+                    suffix=suffix
+                ) as temp_file:
+                    temp_file.write(uploaded_audio.getbuffer())
+                    temp_audio_path = Path(temp_file.name)
+
+                # Remove old segments to avoid mixing previous uploads
+                audio_segments_dir = BASE_DIR / "audio_segments"
+                audio_segments_dir.mkdir(
+                    parents=True,
+                    exist_ok=True
+                )
+
+                for old_segment in audio_segments_dir.glob("*.wav"):
+                    old_segment.unlink()
+
+                # Extract audio into smaller segments
+                with st.spinner("Extracting audio segments..."):
+                    metadata_df = extract_audio(temp_audio_path)
+
+                st.success(
+                    f"Audio extraction completed: {len(metadata_df)} segments created."
+                )
+
+                # Analyze the extracted audio segments
+                with st.spinner("Analyzing audio..."):
+                    results, summary = run_audio_analysis()
+
+                st.success("Audio analysis completed!")
+
+                # Display segment metadata
+                st.subheader("Audio Segment Metadata")
+                st.dataframe(metadata_df, use_container_width=True)
+
+                # Display detailed analysis
+                audio_df = pd.read_csv(
+                    BASE_DIR / "audio_analysis.csv"
+                )
+                st.subheader("Segment-Level Results")
+                st.dataframe(audio_df, use_container_width=True)
+
+                # Display session summary
+                summary_df = pd.read_csv(
+                    BASE_DIR / "session_audio_summary.csv"
+                )
+                st.subheader("Session Summary")
+                st.dataframe(summary_df, use_container_width=True)
+
+                # Download detailed results
+                st.download_button(
+                    "Download Audio Analysis CSV",
+                    data=(BASE_DIR / "audio_analysis.csv").read_bytes(),
+                    file_name="audio_analysis.csv",
+                    mime="text/csv"
+                )
+
+                # Download session summary
+                st.download_button(
+                    "Download Session Summary CSV",
+                    data=(BASE_DIR / "session_audio_summary.csv").read_bytes(),
+                    file_name="session_audio_summary.csv",
+                    mime="text/csv"
+                )
+
+            except Exception as error:
+                st.error(f"Audio processing failed: {error}")
+
+            finally:
+                # Remove the temporary uploaded file
+                if temp_audio_path is not None:
+                    temp_audio_path.unlink(missing_ok=True)
+
 
 
 elif page == "AI Insights":

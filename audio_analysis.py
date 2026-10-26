@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-# Define input and output paths
+# Define project paths
 BASE_DIR = Path(__file__).resolve().parent
 AUDIO_DIR = BASE_DIR / "audio_segments"
 OUTPUT_FILE = BASE_DIR / "audio_analysis.csv"
@@ -35,7 +35,9 @@ def analyze_audio(file_path):
 
     # Calculate zero-crossing rate
     zero_crossings = np.sum(np.diff(np.signbit(audio)))
-    zero_crossing_rate = float(zero_crossings / max(len(audio) - 1, 1))
+    zero_crossing_rate = float(
+        zero_crossings / max(len(audio) - 1, 1)
+    )
 
     # Estimate the sound category using simple thresholds
     if rms < SILENCE_THRESHOLD:
@@ -49,7 +51,7 @@ def analyze_audio(file_path):
     duration = len(audio) / sample_rate
 
     return {
-        "segment": file_path.name,
+        "segment": Path(file_path).name,
         "duration_seconds": round(duration, 3),
         "sample_rate": sample_rate,
         "rms_energy": round(rms, 5),
@@ -60,14 +62,14 @@ def analyze_audio(file_path):
     }
 
 
-def main():
+def run_audio_analysis():
     # Find all WAV audio segments
     audio_files = sorted(AUDIO_DIR.glob("*.wav"))
 
     if not audio_files:
-        print("No WAV files found in the audio_segments folder.")
-        print("Run audio_extraction.py first.")
-        return
+        raise FileNotFoundError(
+            "No WAV files found. Run audio extraction first."
+        )
 
     # Analyze each audio segment
     results = []
@@ -81,8 +83,7 @@ def main():
             print(f"Could not analyze {file_path.name}: {error}")
 
     if not results:
-        print("No audio segments could be analyzed.")
-        return
+        raise ValueError("No audio segments could be analyzed.")
 
     # Save segment-level analysis
     fieldnames = list(results[0].keys())
@@ -94,6 +95,7 @@ def main():
 
     # Calculate session-level summary
     total_segments = len(results)
+
     silence_count = sum(
         row["category"] == "Silence or very low sound"
         for row in results
@@ -131,23 +133,28 @@ def main():
         writer.writeheader()
         writer.writerow(summary)
 
-    # Display the analysis results
-    print("\nAudio analysis complete!")
-    print("\nSegment-level results:")
-
-    for row in results:
-        print(
-            f'{row["segment"]}: {row["category"]}, '
-            f'RMS={row["rms_energy"]}'
-        )
-
-    print("\nSession summary:")
-    for key, value in summary.items():
-        print(f"{key}: {value}")
-
-    print(f"\nDetailed results saved to: {OUTPUT_FILE}")
-    print(f"Session summary saved to: {SUMMARY_FILE}")
+    return results, summary
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        results, summary = run_audio_analysis()
+
+        print("\nAudio analysis complete!")
+        print("\nSegment-level results:")
+
+        for row in results:
+            print(
+                f'{row["segment"]}: {row["category"]}, '
+                f'RMS={row["rms_energy"]}'
+            )
+
+        print("\nSession summary:")
+        for key, value in summary.items():
+            print(f"{key}: {value}")
+
+        print(f"\nDetailed results saved to: {OUTPUT_FILE}")
+        print(f"Session summary saved to: {SUMMARY_FILE}")
+
+    except Exception as error:
+        print(f"Error: {error}")
